@@ -1,33 +1,55 @@
 spring:
   application:
     name: chronos-node
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/chronos_db
-    username: admin
-    password: password
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:chronos_db}
+    username: ${DB_USERNAME:admin}
+    password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate          # Flyway owns the schema; Hibernate only validates
+    show-sql: false               # Never log SQL in production (use query logging at DB level)
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: chronos-group
       auto-offset-reset: earliest
+      enable-auto-commit: false    # Manual commit — Kafka only advances offset after successful processing
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all                    # Leader + all replicas must acknowledge — no data loss
+      retries: 3
+    listener:
+      ack-mode: manual_immediate   # Pair with enable-auto-commit: false
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+app:
+  scheduler:
+    topic: task-topic              # Single source of truth for the topic name
+    poll-delay-ms: 10000
 
 logging:
   level:
     root: INFO
+    com.example.chronos_node: DEBUG
