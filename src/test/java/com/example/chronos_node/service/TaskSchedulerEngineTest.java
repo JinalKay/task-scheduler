@@ -9,7 +9,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
@@ -31,16 +30,18 @@ class TaskSchedulerEngineTest {
     @Mock private TaskRepository taskRepository;
     @Mock private KafkaTemplate<String, String> kafkaTemplate;
     @Mock private RedissonClient redisson;
-    private final AppConfig appConfig = new AppConfig("task-topic");
     @Mock private RLock rLock;
 
-    @InjectMocks
+    // Real AppConfig instance — no mocking needed, just pass the topic string
+    private final AppConfig appConfig = new AppConfig("task-topic");
+
+    // Built manually so we control exactly what gets injected
     private TaskSchedulerEngine engine;
 
     @BeforeEach
     void setUp() {
-        when(redisson.getLock(anyString())).thenReturn(rLock);
-        when(appConfig.getTaskTopic()).thenReturn("task-topic");
+        lenient().when(redisson.getLock(anyString())).thenReturn(rLock);
+        engine = new TaskSchedulerEngine(taskRepository, kafkaTemplate, redisson, appConfig);
     }
 
     @Test
