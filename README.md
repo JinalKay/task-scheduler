@@ -1,7 +1,7 @@
 # ⏳ ChronosNode: Distributed Task Scheduler
 
 ![Java](https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
 ![Kafka](https://img.shields.io/badge/Apache_Kafka-Event_Streaming-231F20?style=for-the-badge&logo=apachekafka&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Distributed_Lock-DC382D?style=for-the-badge&logo=redis&logoColor=white)
 ![Postgres](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
@@ -14,7 +14,7 @@ The system follows an **Event-Driven Architecture (EDA)** to decouple the schedu
 
 ```mermaid
 graph LR
-    A[Client API] -->|POST /add-task| B(Postgres DB)
+    A[Client API] -->|POST /api/v1/tasks| B(Postgres DB)
     C[Scheduler Engine] -->|Acquire Lock| D{"Redis (Redisson)"}
     D -- Lock Granted --> C
     C -->|Poll Ready Tasks| B
@@ -34,7 +34,7 @@ graph LR
 
 ## 🛠 Tech Stack
 
-* **Core:** Java 25, Spring Boot 3.4
+* **Core:** Java 25, Spring Boot 3.5
 * **Database:** PostgreSQL (Hibernate/JPA)
 * **Messaging:** Apache Kafka
 * **Caching/Locking:** Redis (Redisson)
@@ -71,7 +71,16 @@ graph LR
     ```
 3.  **Trigger a Task:**
     ```bash
-    curl -X POST "http://localhost:8080/add-task?name=DemoTask"
+    curl -X POST "http://localhost:8080/api/v1/tasks" \
+      -H "Content-Type: application/json" \
+      -d '{"name": "DemoTask"}'
     ```
-4.  **Verify Logs:**
+    Returns `201 Created` with the task's assigned UUID. Omitting `scheduledAt` dispatches
+    immediately; pass a future ISO-8601 timestamp (e.g. `"scheduledAt": "2026-01-01T00:00:00"`)
+    to delay it.
+4.  **Check Status:**
+    ```bash
+    curl "http://localhost:8080/api/v1/tasks/{id}"
+    ```
+5.  **Verify Logs:**
     You will see the flow: `Leader Election` -> `Kafka Dispatch` -> `Virtual Thread Execution`.
